@@ -49,8 +49,8 @@ resource "aws_iam_role_policy" "data_processor" {
       },
       {
         Effect   = "Allow"
-        Action   = ["lambda:InvokeFunction"]
-        Resource = aws_lambda_function.gcp_forwarder.arn
+        Action   = ["events:PutEvents"]
+        Resource = aws_cloudwatch_event_bus.telemetry.arn
       },
       {
         Effect = "Allow"

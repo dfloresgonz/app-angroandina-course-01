@@ -57,7 +57,8 @@ async function getAccessToken() {
 export const handler = async (event) => {
   const token = await getAccessToken();
 
-  const data = Buffer.from(JSON.stringify(event)).toString('base64');
+  // EventBridge entrega el payload en event.detail
+  const data = Buffer.from(JSON.stringify(event.detail)).toString('base64');
 
   const res = await fetch(PUBSUB_ENDPOINT, {
     method:  'POST',

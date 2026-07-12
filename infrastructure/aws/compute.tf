@@ -53,7 +53,7 @@ resource "aws_lambda_function" "data_processor" {
       TELEMETRY_TABLE      = aws_dynamodb_table.telemetry.name
       WS_CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
       WS_ENDPOINT          = replace(aws_apigatewayv2_stage.main.invoke_url, "wss://", "https://")
-      GCP_FORWARDER_ARN    = aws_lambda_function.gcp_forwarder.arn
+      EVENT_BUS_NAME       = aws_cloudwatch_event_bus.telemetry.name
     }
   }
 }
