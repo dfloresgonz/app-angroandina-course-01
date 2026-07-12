@@ -14,6 +14,3 @@ output "function_url" {
   value = google_cloudfunctions_function.telemetry_ingest.https_trigger_url
 }
 
-output "function_invoker_email" {
-  value = google_service_account.function_invoker.email
-}
