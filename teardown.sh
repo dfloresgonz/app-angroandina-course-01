@@ -84,6 +84,19 @@ for api_id in $API_IDS; do
   log "  Deleted API $api_id"
 done
 
+# ── Lambda Event Source Mappings ──────────────────────────────────────────────
+log "Eliminando Lambda Event Source Mappings..."
+STREAM_ARN=$(aws kinesis describe-stream-summary --stream-name "${PROJECT_NAME}-stream" \
+  --region "$AWS_REGION" --query 'StreamDescriptionSummary.StreamARN' --output text 2>/dev/null || echo "")
+if [ -n "$STREAM_ARN" ]; then
+  MAPPING_IDS=$(aws lambda list-event-source-mappings --event-source-arn "$STREAM_ARN" \
+    --region "$AWS_REGION" --query 'EventSourceMappings[].UUID' --output text 2>/dev/null || echo "")
+  for uuid in $MAPPING_IDS; do
+    aws lambda delete-event-source-mapping --uuid "$uuid" --region "$AWS_REGION"
+    log "  Deleted mapping $uuid"
+  done
+fi
+
 # ── CloudFront ────────────────────────────────────────────────────────────────
 log "Eliminando CloudFront distribution..."
 DIST_ID=$(aws cloudfront list-distributions \
@@ -108,6 +121,16 @@ json.dump(cfg, open('/tmp/cf-config.json','w'))
   ETAG=$(aws cloudfront get-distribution --id "$DIST_ID" --query 'ETag' --output text)
   aws cloudfront delete-distribution --id "$DIST_ID" --if-match "$ETAG"
   log "  Deleted CloudFront $DIST_ID"
+
+  # OAC se puede eliminar solo después de que la distribución fue borrada
+  OAC_ID=$(aws cloudfront list-origin-access-controls \
+    --query "OriginAccessControlList.Items[?Name=='${PROJECT_NAME}-oac'].Id" \
+    --output text 2>/dev/null || echo "")
+  if [ -n "$OAC_ID" ]; then
+    OAC_ETAG=$(aws cloudfront get-origin-access-control --id "$OAC_ID" --query 'ETag' --output text)
+    aws cloudfront delete-origin-access-control --id "$OAC_ID" --if-match "$OAC_ETAG" 2>/dev/null || true
+    log "  Deleted OAC $OAC_ID"
+  fi
 fi
 
 # ── S3 buckets ────────────────────────────────────────────────────────────────

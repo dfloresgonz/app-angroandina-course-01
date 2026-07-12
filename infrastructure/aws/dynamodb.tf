@@ -2,7 +2,7 @@ resource "aws_dynamodb_table" "telemetry" {
   name         = "${var.project_name}-telemetry"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "sensor_id"
-  range_key    = "timestamp"
+  range_key    = "id"
   tags         = local.tags
 
   attribute {
@@ -11,7 +11,7 @@ resource "aws_dynamodb_table" "telemetry" {
   }
 
   attribute {
-    name = "timestamp"
+    name = "id"
     type = "S"
   }
 

@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, ScanCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import { randomUUID } from 'node:crypto';
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const lambda = new LambdaClient({});
@@ -24,7 +25,7 @@ export const handler = async (event) => {
 
     await dynamo.send(new PutCommand({
       TableName: TELEMETRY_TABLE,
-      Item: { ...record, expiresAt }
+      Item: { ...record, id: randomUUID(), expiresAt }
     }));
 
     await lambda.send(new InvokeCommand({

@@ -18,31 +18,43 @@ data "archive_file" "telemetry_ingest_zip" {
   output_path = "/tmp/telemetry-ingest.zip"
 }
 
-resource "google_cloudfunctions_function" "telemetry_ingest" {
+resource "google_cloudfunctions2_function" "telemetry_ingest" {
   name        = "${var.project_name}-telemetry-ingest"
   description = "Receives telemetry from AWS and writes to BigQuery"
-  runtime     = "nodejs22"
-  region      = var.region
+  location    = var.region
   labels      = local.labels
 
-  available_memory_mb   = 256
-  source_archive_bucket = google_storage_bucket.function_source.name
-  source_archive_object = google_storage_bucket_object.telemetry_ingest_source.name
-  entry_point           = "ingestTelemetry"
-  trigger_http          = true
+  build_config {
+    runtime     = "nodejs22"
+    entry_point = "ingestTelemetry"
 
-  environment_variables = {
-    BIGQUERY_DATASET = google_bigquery_dataset.main.dataset_id
-    BIGQUERY_TABLE   = google_bigquery_table.telemetry.table_id
-    PROJECT_ID       = var.project_id
+    source {
+      storage_source {
+        bucket = google_storage_bucket.function_source.name
+        object = google_storage_bucket_object.telemetry_ingest_source.name
+      }
+    }
+  }
+
+  service_config {
+    available_memory   = "256M"
+    timeout_seconds    = 60
+    min_instance_count = 0
+    max_instance_count = 5
+
+    environment_variables = {
+      BIGQUERY_DATASET = google_bigquery_dataset.main.dataset_id
+      BIGQUERY_TABLE   = google_bigquery_table.telemetry.table_id
+      PROJECT_ID       = var.project_id
+    }
   }
 }
 
 # Permite invocaciones sin autenticación desde AWS Lambda
-resource "google_cloudfunctions_function_iam_member" "public_invoker" {
-  project        = var.project_id
-  region         = var.region
-  cloud_function = google_cloudfunctions_function.telemetry_ingest.name
-  role           = "roles/cloudfunctions.invoker"
-  member         = "allUsers"
+resource "google_cloud_run_service_iam_member" "public_invoker" {
+  project  = var.project_id
+  location = var.region
+  service  = google_cloudfunctions2_function.telemetry_ingest.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }

@@ -9,6 +9,7 @@ resource "aws_lambda_function" "ws_handler" {
   runtime          = "nodejs24.x"
   filename         = "${local.lambda_zip_path}/ws-handler.zip"
   source_code_hash = filebase64sha256("${local.lambda_zip_path}/ws-handler.zip")
+  timeout          = 10
   tags             = local.tags
 
   environment {
@@ -25,6 +26,7 @@ resource "aws_lambda_function" "gcp_forwarder" {
   runtime          = "nodejs24.x"
   filename         = "${local.lambda_zip_path}/gcp-forwarder.zip"
   source_code_hash = filebase64sha256("${local.lambda_zip_path}/gcp-forwarder.zip")
+  timeout          = 15
   tags             = local.tags
 
   environment {
@@ -41,6 +43,7 @@ resource "aws_lambda_function" "data_processor" {
   runtime          = "nodejs24.x"
   filename         = "${local.lambda_zip_path}/data-processor.zip"
   source_code_hash = filebase64sha256("${local.lambda_zip_path}/data-processor.zip")
+  timeout          = 30
   tags             = local.tags
 
   environment {
