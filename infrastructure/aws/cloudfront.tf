@@ -8,6 +8,7 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   default_root_object = "index.html"
+  comment             = "${var.project_name}-${var.environment}-frontend"
   tags                = local.tags
 
   origin {

@@ -7,8 +7,8 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "angroandina-monitor-tfstate"
-    prefix = "gcp"
+    bucket = "angroandina-monitor-tfstate-dev"
+    prefix = "dev"
   }
 }
 
@@ -22,5 +22,6 @@ locals {
     project_name = var.project_name
     environment  = var.environment
     managed_by   = "terraform"
+    owner        = "grupo1-prog-multinube"
   }
 }

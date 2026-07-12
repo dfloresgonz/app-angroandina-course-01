@@ -7,10 +7,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "angroandina-monitor-tfstate"
-    key            = "aws/terraform.tfstate"
+    bucket         = "angroandina-monitor-tfstate-dev"
+    key            = "dev/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "angroandina-tfstate-lock"
+    dynamodb_table = "angroandina-tfstate-lock-dev"
     encrypt        = true
   }
 }
@@ -27,5 +27,6 @@ locals {
     ProjectName = var.project_name
     Environment = var.environment
     ManagedBy   = "terraform"
+    Owner       = "grupo1-prog-multinube"
   }
 }

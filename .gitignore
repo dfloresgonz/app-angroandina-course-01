@@ -1,0 +1,33 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+
+# Lambda zips
+.lambda-zips/
+
+# Frontend config (generado por deploy.sh)
+frontend/js/config.js
+
+# GCP credentials
+gcp-key.json
+*.json.key
+
+# Node
+node_modules/
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

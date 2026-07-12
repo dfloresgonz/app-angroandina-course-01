@@ -15,7 +15,7 @@ GCP_PROJECT="${GCP_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null)}"
 [ -n "$GCP_PROJECT" ] || die "GCP_PROJECT_ID no está definido. Exporta: export GCP_PROJECT_ID=utec-posgrado-01"
 
 # Nombre único para el bucket (igual en AWS y GCS — cambia si ya existe)
-STATE_BUCKET="angroandina-monitor-tfstate"
+STATE_BUCKET="angroandina-monitor-tfstate-dev"
 
 # ─── AWS: S3 bucket + DynamoDB lock table ────────────────────────────────────
 log "Creando S3 bucket para Terraform state: $STATE_BUCKET"
@@ -42,23 +42,23 @@ else
 
   aws s3api put-bucket-tagging \
     --bucket "$STATE_BUCKET" \
-    --tagging 'TagSet=[{Key=ProjectName,Value=angroandina-monitor},{Key=Environment,Value=dev},{Key=ManagedBy,Value=terraform}]'
+    --tagging 'TagSet=[{Key=ProjectName,Value=angroandina-monitor},{Key=Environment,Value=dev},{Key=ManagedBy,Value=terraform},{Key=Owner,Value=grupo1-prog-multinube}]'
 
   log "  ✓ S3 bucket creado"
 fi
 
-log "Creando DynamoDB tabla para state locking: angroandina-tfstate-lock"
-if aws dynamodb describe-table --table-name angroandina-tfstate-lock \
+log "Creando DynamoDB tabla para state locking: angroandina-tfstate-lock-dev"
+if aws dynamodb describe-table --table-name angroandina-tfstate-lock-dev \
    --region "$AWS_REGION" >/dev/null 2>&1; then
   log "  La tabla ya existe, omitiendo."
 else
   aws dynamodb create-table \
-    --table-name angroandina-tfstate-lock \
+    --table-name angroandina-tfstate-lock-dev \
     --attribute-definitions AttributeName=LockID,AttributeType=S \
     --key-schema AttributeName=LockID,KeyType=HASH \
     --billing-mode PAY_PER_REQUEST \
     --region "$AWS_REGION" \
-    --tags Key=ProjectName,Value=angroandina-monitor Key=Environment,Value=dev Key=ManagedBy,Value=terraform
+    --tags Key=ProjectName,Value=angroandina-monitor Key=Environment,Value=dev Key=ManagedBy,Value=terraform Key=Owner,Value=grupo1-prog-multinube
   log "  ✓ DynamoDB tabla creada"
 fi
 
@@ -72,13 +72,13 @@ else
     --location=US \
     --uniform-bucket-level-access
   gcloud storage buckets update "gs://$STATE_BUCKET" \
-    --update-labels=project_name=angroandina-monitor,environment=dev,managed_by=terraform
+    --update-labels=project_name=angroandina-monitor,environment=dev,managed_by=terraform,owner=grupo1-prog-multinube
   log "  ✓ GCS bucket creado"
 fi
 
 log ""
 log "✅ Bootstrap completo."
-log "   AWS  → s3://$STATE_BUCKET  +  DynamoDB angroandina-tfstate-lock"
+log "   AWS  → s3://$STATE_BUCKET  +  DynamoDB angroandina-tfstate-lock-dev"
 log "   GCP  → gs://$STATE_BUCKET"
 log ""
 log "Ahora puedes correr: ./deploy.sh"
