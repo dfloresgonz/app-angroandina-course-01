@@ -79,6 +79,6 @@ resource "aws_wafv2_web_acl" "apigw" {
 }
 
 resource "aws_wafv2_web_acl_association" "apigw" {
-  resource_arn = "arn:aws:apigateway:us-east-1::/restapis/${aws_apigatewayv2_api.ws.id}/stages/${aws_apigatewayv2_stage.main.name}"
+  resource_arn = "arn:aws:apigateway:us-east-1::/apis/${aws_apigatewayv2_api.ws.id}/stages/${aws_apigatewayv2_stage.main.name}"
   web_acl_arn  = aws_wafv2_web_acl.apigw.arn
 }
