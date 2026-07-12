@@ -13,7 +13,7 @@ exports.ingestTelemetry = async (req, res) => {
 
   const row = {
     sensor_id:       raw.sensor_id,
-    timestamp:       new Date(Number(raw.timestamp)).toISOString(),
+    timestamp:       new Date(Number(raw.timestamp) || raw.timestamp).toISOString(),
     temperature:     raw.temperature ?? null,
     humidity:        raw.humidity ?? null,
     soil_moisture:   raw.soil_moisture ?? null,
