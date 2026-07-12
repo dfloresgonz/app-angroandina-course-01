@@ -141,7 +141,7 @@ Alertas:  CloudWatch Alarm → SNS → email (errores en gcp-forwarder)
 | CloudFormation | Deploy del Kinesis Data Generator |
 | CloudWatch Alarms | Monitoreo de errores en gcp-forwarder |
 | SNS | Notificaciones por email ante errores |
-| WAF (×2) | Protección OWASP top 10 en CloudFront y API Gateway |
+| WAF | Protección OWASP top 10 en CloudFront |
 
 **GCP**
 | Servicio | Rol |
@@ -278,21 +278,20 @@ La Lambda `gcp-forwarder` necesita publicar en Pub/Sub (API de GCP). El flujo de
 
 ### WAF (Web Application Firewall)
 
-Se configuraron dos WAFs con el managed rule group `AWSManagedRulesCommonRuleSet` (protección OWASP top 10: SQLi, XSS, path traversal, etc.):
+Se configuró un WAF con el managed rule group `AWSManagedRulesCommonRuleSet` (protección OWASP top 10: SQLi, XSS, path traversal, etc.) asociado a CloudFront:
 
-| WAF | Scope | Recurso protegido | Nota |
-|-----|-------|-------------------|------|
-| `frontend-waf` | `CLOUDFRONT` | Distribución CloudFront | Inspecciona todas las requests al frontend |
-| `apigw-waf` | `REGIONAL` | API Gateway WebSocket | Inspecciona el handshake HTTP inicial (`$connect`) |
+| WAF | Scope | Recurso protegido |
+|-----|-------|-------------------|
+| `frontend-waf` | `CLOUDFRONT` | Distribución CloudFront |
 
-> El WAF de WebSocket protege el momento de la conexión. Los frames posteriores no son inspeccionables por WAF — es una limitación del protocolo WebSocket.
+> **Limitación:** AWS WAF no es compatible con API Gateway v2 (WebSocket/HTTP APIs) — solo soporta API Gateway v1 (REST APIs). Por esta razón el WebSocket no puede protegerse con WAF en esta arquitectura. Como trabajo futuro se podría poner un ALB delante del WebSocket para habilitar la asociación WAF.
 
 ### Recursos públicos vs privados
 
 | Recurso | Acceso | Protección adicional |
 |---------|--------|----------------------|
 | CloudFront / S3 | Público | WAF `frontend-waf` (OWASP top 10) |
-| API Gateway WebSocket | Público con token Cognito | WAF `apigw-waf` en handshake |
+| API Gateway WebSocket | Público con token Cognito | Sin WAF (API GW v2 no soportado) |
 | Cloud Function telemetry-ingest | Público | Restricción de permisos del entorno (ver Limitaciones) |
 | DynamoDB | Privado (solo Lambdas) | IAM roles por función |
 | EventBridge bus | Privado (solo data-processor) | IAM `events:PutEvents` restringido al ARN del bus |
@@ -321,8 +320,8 @@ Estimación para el volumen del proyecto (5 sensores, ~1 msg/seg, uso intermiten
 | Secrets Manager | 1 secret | ~$0.40 |
 | S3 + CloudFront | < 1 GB transferencia | ~$0.10 |
 | Cognito | < 50,000 MAU | Free tier |
-| WAF (×2 ACLs + 2 rule groups) | ~1M requests/mes | ~$13.20 |
-| **Total AWS** | | **~$13.73/mes** |
+| WAF (×1 ACL + 1 rule group) | ~1M requests/mes | ~$6.60 |
+| **Total AWS** | | **~$7.13/mes** |
 
 **GCP**
 
