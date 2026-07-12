@@ -143,6 +143,7 @@ jobs:
           echo "distribution_id=$(terraform output -raw distribution_id)"      >> $GITHUB_OUTPUT
           echo "pool_id=$(terraform output -raw cognito_user_pool_id)"         >> $GITHUB_OUTPUT
           echo "client_id=$(terraform output -raw cognito_client_id)"          >> $GITHUB_OUTPUT
+          echo "kdg_url=$(terraform output -raw kdg_url)"                      >> $GITHUB_OUTPUT
 
       # ── 9. Frontend config ─────────────────────────────────────────────────
       - name: Generate frontend/js/config.js
@@ -180,4 +181,5 @@ jobs:
           echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY
           echo "| Dashboard | ${{ steps.aws.outputs.cloudfront_url }} |" >> $GITHUB_STEP_SUMMARY
           echo "| WebSocket | ${{ steps.aws.outputs.ws_endpoint }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| KDG | ${{ steps.aws.outputs.kdg_url }} |" >> $GITHUB_STEP_SUMMARY
           echo "| GCP Function | ${{ steps.gcp.outputs.function_url }} |" >> $GITHUB_STEP_SUMMARY

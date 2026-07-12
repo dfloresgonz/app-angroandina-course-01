@@ -109,6 +109,30 @@
       color: var(--muted);
       margin-top: 20px;
     }
+
+    .login-switch {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 18px;
+    }
+    .login-switch a {
+      color: var(--green);
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .login-switch a:hover { text-decoration: underline; }
+
+    .login-success {
+      font-size: 13px;
+      color: var(--green);
+      background: #4ade8012;
+      border: 1px solid #4ade8030;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+    }
   </style>
 </head>
 <body>
@@ -142,6 +166,77 @@
 
         <button class="login-btn" id="btn-signin" type="submit">
           <span class="btn-label">Ingresar</span>
+          <span class="btn-spinner" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" class="spin">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83
+                       M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </span>
+        </button>
+      </form>
+      <div class="login-switch">
+        ¿No tienes cuenta? <a id="go-signup">Crear cuenta</a>
+      </div>
+    </div>
+
+    <!-- Vista: registro -->
+    <div id="view-signup" hidden>
+      <h1 class="login-title">Crear cuenta</h1>
+      <p class="login-hint">Ingresa tu correo y elige una contraseña segura.</p>
+
+      <form id="form-signup" novalidate>
+        <div class="login-field">
+          <label class="login-label" for="signup-email">Correo electrónico</label>
+          <input class="login-input" id="signup-email" type="email"
+                 autocomplete="email" placeholder="nombre@ejemplo.com" required />
+        </div>
+        <div class="login-field">
+          <label class="login-label" for="signup-password">Contraseña</label>
+          <input class="login-input" id="signup-password" type="password"
+                 autocomplete="new-password" placeholder="Mínimo 8 caracteres" required />
+        </div>
+        <div class="login-field">
+          <label class="login-label" for="signup-confirm">Confirmar contraseña</label>
+          <input class="login-input" id="signup-confirm" type="password"
+                 autocomplete="new-password" placeholder="Repite tu contraseña" required />
+        </div>
+
+        <div class="login-error" id="error-signup" hidden></div>
+
+        <button class="login-btn" id="btn-signup" type="submit">
+          <span class="btn-label">Registrarme</span>
+          <span class="btn-spinner" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" class="spin">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83
+                       M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </span>
+        </button>
+      </form>
+      <div class="login-switch">
+        ¿Ya tienes cuenta? <a id="go-signin-from-signup">Iniciar sesión</a>
+      </div>
+    </div>
+
+    <!-- Vista: confirmar código -->
+    <div id="view-confirm" hidden>
+      <h1 class="login-title">Verifica tu correo</h1>
+      <p class="login-hint">Te enviamos un código de verificación. Revisa tu bandeja de entrada.</p>
+
+      <form id="form-confirm" novalidate>
+        <div class="login-field">
+          <label class="login-label" for="confirm-code">Código de verificación</label>
+          <input class="login-input" id="confirm-code" type="text"
+                 autocomplete="one-time-code" placeholder="123456" required />
+        </div>
+
+        <div class="login-error"   id="error-confirm"  hidden></div>
+        <div class="login-success" id="success-confirm" hidden></div>
+
+        <button class="login-btn" id="btn-confirm" type="submit">
+          <span class="btn-label">Verificar</span>
           <span class="btn-spinner" hidden>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2.5" class="spin">
@@ -191,19 +286,23 @@
 </div>
 
 <script type="module">
-  import { signIn, completeNewPassword, getSession } from './js/auth.js';
+  import { signIn, completeNewPassword, signUp, confirmSignUp, getSession } from './js/auth.js';
 
   if (getSession()) window.location.replace('/');
 
-  let challengeState = null;
+  let challengeState  = null;
+  let pendingEmail    = null;
+
+  const VIEWS = ['signin', 'signup', 'confirm', 'newpass'];
 
   function showView(name) {
-    document.getElementById('view-signin').hidden  = name !== 'signin';
-    document.getElementById('view-newpass').hidden = name !== 'newpass';
+    VIEWS.forEach(v => {
+      document.getElementById(`view-${v}`).hidden = v !== name;
+    });
   }
 
   function setLoading(btnId, loading) {
-    const btn    = document.getElementById(btnId);
+    const btn = document.getElementById(btnId);
     btn.disabled = loading;
     btn.querySelector('.btn-label').hidden   = loading;
     btn.querySelector('.btn-spinner').hidden = !loading;
@@ -215,19 +314,29 @@
     el.hidden = false;
   }
 
-  function clearErrors() {
-    ['error-signin', 'error-newpass'].forEach(id => {
+  function showSuccess(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function clearAll() {
+    ['error-signin','error-signup','error-confirm','error-newpass','success-confirm'].forEach(id => {
       const el = document.getElementById(id);
-      el.hidden = true;
-      el.textContent = '';
+      if (el) { el.hidden = true; el.textContent = ''; }
     });
   }
 
-  document.querySelectorAll('.login-input').forEach(i => i.addEventListener('input', clearErrors));
+  document.querySelectorAll('.login-input').forEach(i => i.addEventListener('input', clearAll));
 
+  // Navigation links
+  document.getElementById('go-signup').addEventListener('click', () => { clearAll(); showView('signup'); });
+  document.getElementById('go-signin-from-signup').addEventListener('click', () => { clearAll(); showView('signin'); });
+
+  // ── Sign-in ────────────────────────────────────────────────────────────────
   document.getElementById('form-signin').addEventListener('submit', async e => {
     e.preventDefault();
-    clearErrors();
+    clearAll();
     const email    = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     if (!email || !password) { showError('error-signin', 'Completa todos los campos.'); return; }
@@ -247,11 +356,57 @@
     }
   });
 
+  // ── Sign-up ────────────────────────────────────────────────────────────────
+  document.getElementById('form-signup').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearAll();
+    const email   = document.getElementById('signup-email').value.trim();
+    const pass    = document.getElementById('signup-password').value;
+    const confirm = document.getElementById('signup-confirm').value;
+    if (!email || !pass || !confirm) { showError('error-signup', 'Completa todos los campos.'); return; }
+    if (pass !== confirm)            { showError('error-signup', 'Las contraseñas no coinciden.'); return; }
+    if (pass.length < 8)             { showError('error-signup', 'Mínimo 8 caracteres.'); return; }
+    setLoading('btn-signup', true);
+    try {
+      const result = await signUp(email, pass);
+      pendingEmail = email;
+      if (result.userConfirmed) {
+        // auto-confirmed (e.g. admin flow) — go straight to sign-in
+        showView('signin');
+      } else {
+        showView('confirm');
+      }
+    } catch (err) {
+      showError('error-signup', friendlyError(err.message));
+    } finally {
+      setLoading('btn-signup', false);
+    }
+  });
+
+  // ── Confirm code ───────────────────────────────────────────────────────────
+  document.getElementById('form-confirm').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearAll();
+    const code = document.getElementById('confirm-code').value.trim();
+    if (!code) { showError('error-confirm', 'Ingresa el código de verificación.'); return; }
+    setLoading('btn-confirm', true);
+    try {
+      await confirmSignUp(pendingEmail, code);
+      showSuccess('success-confirm', 'Cuenta verificada. Ahora puedes iniciar sesión.');
+      setTimeout(() => { clearAll(); showView('signin'); }, 2000);
+    } catch (err) {
+      showError('error-confirm', friendlyError(err.message));
+    } finally {
+      setLoading('btn-confirm', false);
+    }
+  });
+
+  // ── New password ───────────────────────────────────────────────────────────
   document.getElementById('form-newpass').addEventListener('submit', async e => {
     e.preventDefault();
-    clearErrors();
-    const newPass  = document.getElementById('new-password').value;
-    const confirm  = document.getElementById('confirm-password').value;
+    clearAll();
+    const newPass = document.getElementById('new-password').value;
+    const confirm = document.getElementById('confirm-password').value;
     if (!newPass || !confirm) { showError('error-newpass', 'Completa todos los campos.'); return; }
     if (newPass !== confirm)  { showError('error-newpass', 'Las contraseñas no coinciden.'); return; }
     if (newPass.length < 8)   { showError('error-newpass', 'Mínimo 8 caracteres.'); return; }
@@ -271,6 +426,8 @@
     const m = msg.toLowerCase();
     if (m.includes('notauthorized') || m.includes('incorrect')) return 'Correo o contraseña incorrectos.';
     if (m.includes('usernotfound'))      return 'No existe una cuenta con ese correo.';
+    if (m.includes('usernameexists'))    return 'Ya existe una cuenta con ese correo.';
+    if (m.includes('codemismatch') || m.includes('code'))       return 'Código incorrecto o expirado.';
     if (m.includes('toomanyrequests') || m.includes('limitexceeded')) return 'Demasiados intentos. Espera unos minutos.';
     if (m.includes('password'))          return 'La contraseña no cumple los requisitos de seguridad.';
     return msg;

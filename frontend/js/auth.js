@@ -34,6 +34,28 @@ function parseJwt(token) {
   try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
 }
 
+export async function signUp(email, password) {
+  const res  = await cognitoPost('SignUp', {
+    ClientId: CLIENT_ID,
+    Username: email,
+    Password: password,
+    UserAttributes: [{ Name: 'email', Value: email }]
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || data.__type || 'Error al registrar');
+  return { ok: true, userConfirmed: data.UserConfirmed };
+}
+
+export async function confirmSignUp(email, code) {
+  const res  = await cognitoPost('ConfirmSignUp', {
+    ClientId:         CLIENT_ID,
+    Username:         email,
+    ConfirmationCode: code
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || data.__type || 'Código incorrecto');
+}
+
 export async function signIn(email, password) {
   const res  = await cognitoPost('InitiateAuth', {
     AuthFlow:       'USER_PASSWORD_AUTH',
