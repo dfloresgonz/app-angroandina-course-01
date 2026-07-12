@@ -50,11 +50,11 @@ resource "google_cloudfunctions2_function" "telemetry_ingest" {
   }
 }
 
-# Solo el SA de Pub/Sub puede invocar la función
-resource "google_cloud_run_service_iam_member" "pubsub_invoker" {
+# Invocación pública — Pub/Sub push no requiere OIDC
+resource "google_cloud_run_service_iam_member" "public_invoker" {
   project  = var.project_id
   location = var.region
   service  = google_cloudfunctions2_function.telemetry_ingest.name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.pubsub_invoker.email}"
+  member   = "allUsers"
 }

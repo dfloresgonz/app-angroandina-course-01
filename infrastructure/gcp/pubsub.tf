@@ -9,10 +9,6 @@ resource "google_pubsub_subscription" "telemetry_push" {
 
   push_config {
     push_endpoint = google_cloudfunctions2_function.telemetry_ingest.service_config[0].uri
-
-    oidc_token {
-      service_account_email = google_service_account.pubsub_invoker.email
-    }
   }
 
   ack_deadline_seconds       = 60
