@@ -581,6 +581,12 @@ Cognito
 AWS Lambda
 ![alt text](image-13.png)
 
+Cloudwatch Alarms
+![alt text](image-18.png)
+
+SNS Topic
+![alt text](image-19.png)
+
 GCP - Buckets
 ![alt text](image-14.png)
 
