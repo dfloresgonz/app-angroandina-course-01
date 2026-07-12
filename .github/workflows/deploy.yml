@@ -122,7 +122,7 @@ jobs:
       # ── 8. Deploy AWS ──────────────────────────────────────────────────────
       - name: Terraform init — AWS
         working-directory: infrastructure/aws
-        run: terraform init -input=false
+        run: terraform init -input=false -upgrade
 
       - name: Terraform apply — AWS
         id: aws
