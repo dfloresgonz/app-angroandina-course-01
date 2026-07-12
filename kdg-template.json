@@ -1,0 +1,10 @@
+{
+  "sensor_id":     "{{random.arrayElement(["SENSOR_01","SENSOR_02","SENSOR_03","SENSOR_04","SENSOR_05"])}}",
+  "timestamp":     "{{Date.now()}}",
+  "temperature":   {{random.number({"min":15,"max":40,"precision":0.1})}},
+  "humidity":      {{random.number({"min":20,"max":95,"precision":0.1})}},
+  "soil_moisture": {{random.number({"min":10,"max":90,"precision":0.1})}},
+  "light_intensity": {{random.number({"min":0,"max":1200,"precision":1})}},
+  "wind_speed":    {{random.number({"min":0,"max":50,"precision":0.1})}},
+  "battery_level": {{random.number({"min":5,"max":100,"precision":1})}}
+}

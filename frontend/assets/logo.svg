@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 40" fill="none">
+  <!-- Leaf icon -->
+  <path d="M8 32 C8 20 16 8 28 6 C28 18 22 28 8 32Z" fill="#4ade80"/>
+  <path d="M8 32 C14 26 22 22 28 6" stroke="#22c55e" stroke-width="1.2" fill="none"/>
+  <!-- Sensor dot -->
+  <circle cx="28" cy="6" r="3" fill="#38bdf8"/>
+  <!-- Pulse rings -->
+  <circle cx="28" cy="6" r="6" stroke="#38bdf8" stroke-width="0.8" opacity="0.4"/>
+  <circle cx="28" cy="6" r="9" stroke="#38bdf8" stroke-width="0.5" opacity="0.2"/>
+  <!-- Text -->
+  <text x="42" y="27" font-family="'Segoe UI', system-ui, sans-serif" font-size="17" font-weight="700" fill="#e2e8e2">Angro</text>
+  <text x="96" y="27" font-family="'Segoe UI', system-ui, sans-serif" font-size="17" font-weight="700" fill="#4ade80">Andina</text>
+  <text x="163" y="27" font-family="'Segoe UI', system-ui, sans-serif" font-size="10" font-weight="400" fill="#6b7c6b"> Monitor</text>
+</svg>
