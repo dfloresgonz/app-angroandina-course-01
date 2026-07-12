@@ -536,11 +536,12 @@ Todo AWS está en `us-east-1` y GCP en `us-central1`. En producción se evaluar�
 
 ### Dashboard en tiempo real
 
-<!-- Insertar captura del dashboard con datos en vivo (6 gráficos, 5 sensores) -->
+![alt text](image.png)
 
 ### Página de login y registro
 
-<!-- Insertar captura del login y del formulario de creación de cuenta -->
+![alt text](image-1.png)
+![alt text](image-2.png)
 
 ### Reporte en Looker Studio
 
@@ -548,11 +549,49 @@ Todo AWS está en `us-east-1` y GCP en `us-central1`. En producción se evaluar�
 
 ### Pipeline de GitHub Actions
 
-<!-- Insertar captura del pipeline exitoso con el Job Summary -->
+![alt text](image-3.png)
+![alt text](image-4.png)
 
 ### Infraestructura en AWS Console
 
-<!-- Insertar captura de los recursos principales (Lambda, DynamoDB, EventBridge) -->
+Eventbridge-bus
+![alt text](image-5.png)
+
+WAF
+![alt text](image-6.png)
+
+DynamoDB
+![alt text](image-7.png)
+
+S3 Buckets
+![alt text](image-8.png)
+
+Cloudfront
+![alt text](image-9.png)
+
+API Gateway - websockets
+![alt text](image-10.png)
+
+Secrets Manager
+![alt text](image-11.png)
+
+Cognito
+![alt text](image-12.png)
+
+AWS Lambda
+![alt text](image-13.png)
+
+GCP - Buckets
+![alt text](image-14.png)
+
+GCP - BigQuery
+![alt text](image-15.png)
+
+GCP - PubSub
+![alt text](image-16.png)
+
+GCP - Functions
+![alt text](image-17.png)
 
 ### Infraestructura en GCP Console
 
