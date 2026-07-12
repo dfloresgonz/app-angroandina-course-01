@@ -17,7 +17,12 @@ variable "kdg_password" {
   sensitive = true
 }
 
-variable "gcp_forwarder_url" {
+variable "gcp_project_id" {
   type        = string
-  description = "GCP Pub/Sub HTTP endpoint (output from GCP deploy)"
+  description = "GCP project ID"
+}
+
+variable "gcp_pubsub_topic" {
+  type        = string
+  description = "Nombre del topic de Pub/Sub (output from GCP deploy)"
 }

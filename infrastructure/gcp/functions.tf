@@ -6,21 +6,21 @@ resource "google_storage_bucket" "function_source" {
   labels                      = local.labels
 }
 
-resource "google_storage_bucket_object" "telemetry_ingest_source" {
-  name   = "telemetry-ingest-${filemd5("${path.module}/../../gcp-functions/telemetry-ingest/index.js")}.zip"
-  bucket = google_storage_bucket.function_source.name
-  source = data.archive_file.telemetry_ingest_zip.output_path
-}
-
 data "archive_file" "telemetry_ingest_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../../gcp-functions/telemetry-ingest"
   output_path = "/tmp/telemetry-ingest.zip"
 }
 
+resource "google_storage_bucket_object" "telemetry_ingest_source" {
+  name   = "telemetry-ingest-${filemd5("${path.module}/../../gcp-functions/telemetry-ingest/index.js")}.zip"
+  bucket = google_storage_bucket.function_source.name
+  source = data.archive_file.telemetry_ingest_zip.output_path
+}
+
 resource "google_cloudfunctions2_function" "telemetry_ingest" {
   name        = "${var.project_name}-telemetry-ingest"
-  description = "Receives telemetry from AWS and writes to BigQuery"
+  description = "Receives Pub/Sub push and writes to BigQuery"
   location    = var.region
   labels      = local.labels
 
@@ -43,18 +43,18 @@ resource "google_cloudfunctions2_function" "telemetry_ingest" {
     max_instance_count = 5
 
     environment_variables = {
+      PROJECT_ID       = var.project_id
       BIGQUERY_DATASET = google_bigquery_dataset.main.dataset_id
       BIGQUERY_TABLE   = google_bigquery_table.telemetry.table_id
-      PROJECT_ID       = var.project_id
     }
   }
 }
 
-# Permite invocaciones sin autenticación desde AWS Lambda
-resource "google_cloud_run_service_iam_member" "public_invoker" {
+# Solo el SA de Pub/Sub puede invocar la función
+resource "google_cloud_run_service_iam_member" "pubsub_invoker" {
   project  = var.project_id
   location = var.region
   service  = google_cloudfunctions2_function.telemetry_ingest.name
   role     = "roles/run.invoker"
-  member   = "allUsers"
+  member   = "serviceAccount:${google_service_account.pubsub_invoker.email}"
 }

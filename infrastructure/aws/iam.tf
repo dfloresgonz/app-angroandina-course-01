@@ -110,6 +110,11 @@ resource "aws_iam_role_policy" "gcp_forwarder" {
     Version = "2012-10-17"
     Statement = [
       {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = aws_secretsmanager_secret.gcp_sa_key.arn
+      },
+      {
         Effect = "Allow"
         Action = [
           "logs:CreateLogGroup",

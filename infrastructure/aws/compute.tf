@@ -31,7 +31,9 @@ resource "aws_lambda_function" "gcp_forwarder" {
 
   environment {
     variables = {
-      GCP_PUBSUB_URL = var.gcp_forwarder_url
+      GCP_SA_SECRET_ARN = aws_secretsmanager_secret.gcp_sa_key.arn
+      GCP_PROJECT_ID    = var.gcp_project_id
+      GCP_PUBSUB_TOPIC  = var.gcp_pubsub_topic
     }
   }
 }

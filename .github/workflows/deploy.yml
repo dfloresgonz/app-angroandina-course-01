@@ -11,8 +11,12 @@ env:
   TF_VAR_environment: dev
   TF_VAR_kdg_username: ${{ secrets.KDG_USERNAME }}
   TF_VAR_kdg_password: ${{ secrets.KDG_PASSWORD }}
+  # GCP Terraform vars
   TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_region: us-central1
+  # AWS Terraform vars (GCP references)
+  TF_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_gcp_pubsub_topic: angroandina-monitor-telemetry
 
 jobs:
   deploy:
@@ -125,7 +129,24 @@ jobs:
           terraform apply -auto-approve -input=false
           echo "function_url=$(terraform output -raw function_url)" >> $GITHUB_OUTPUT
 
-      # ── 8. Deploy AWS ──────────────────────────────────────────────────────
+      # ── 8. Store GCP SA key in Secrets Manager ────────────────────────────
+      - name: Store GCP SA key in Secrets Manager
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          SECRET_NAME="angroandina-monitor/gcp-sa-key"
+          if aws secretsmanager describe-secret --secret-id "$SECRET_NAME" >/dev/null 2>&1; then
+            aws secretsmanager put-secret-value \
+              --secret-id "$SECRET_NAME" \
+              --secret-string "$GCP_SA_KEY"
+          else
+            aws secretsmanager create-secret \
+              --name "$SECRET_NAME" \
+              --secret-string "$GCP_SA_KEY" \
+              --tags Key=ProjectName,Value=angroandina-monitor Key=Environment,Value=dev Key=ManagedBy,Value=terraform Key=Owner,Value=grupo1-prog-multinube
+          fi
+
+      # ── 9. Deploy AWS ──────────────────────────────────────────────────────
       - name: Terraform init — AWS
         working-directory: infrastructure/aws
         run: terraform init -input=false -upgrade
@@ -134,8 +155,7 @@ jobs:
         id: aws
         working-directory: infrastructure/aws
         run: |
-          terraform apply -auto-approve -input=false \
-            -var="gcp_forwarder_url=${{ steps.gcp.outputs.function_url }}"
+          terraform apply -auto-approve -input=false
 
           echo "cloudfront_url=$(terraform output -raw cloudfront_url)"        >> $GITHUB_OUTPUT
           echo "ws_endpoint=$(terraform output -raw ws_endpoint)"              >> $GITHUB_OUTPUT
@@ -145,7 +165,7 @@ jobs:
           echo "client_id=$(terraform output -raw cognito_client_id)"          >> $GITHUB_OUTPUT
           echo "kdg_url=$(terraform output -raw kdg_url)"                      >> $GITHUB_OUTPUT
 
-      # ── 9. Frontend config ─────────────────────────────────────────────────
+      # ── 10. Frontend config ────────────────────────────────────────────────
       - name: Generate frontend/js/config.js
         run: |
           cat > frontend/js/config.js <<EOF
@@ -156,7 +176,7 @@ jobs:
           };
           EOF
 
-      # ── 10. Sync frontend → S3 ─────────────────────────────────────────────
+      # ── 11. Sync frontend → S3 ─────────────────────────────────────────────
       - name: Sync frontend to S3
         run: |
           aws s3 sync frontend/ s3://${{ steps.aws.outputs.frontend_bucket }} \
@@ -164,7 +184,7 @@ jobs:
             --cache-control "no-cache, no-store, must-revalidate" \
             --exclude "*.DS_Store"
 
-      # ── 11. Invalidar CloudFront ───────────────────────────────────────────
+      # ── 12. Invalidar CloudFront ───────────────────────────────────────────
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
@@ -172,7 +192,7 @@ jobs:
             --paths "/*" \
             --query 'Invalidation.Id' --output text
 
-      # ── 12. Job summary ────────────────────────────────────────────────────
+      # ── 13. Job summary ────────────────────────────────────────────────────
       - name: Job summary
         run: |
           echo "## ✅ Deploy completo" >> $GITHUB_STEP_SUMMARY

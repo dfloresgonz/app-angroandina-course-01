@@ -1,5 +1,6 @@
 output "pubsub_topic" {
-  value = google_pubsub_topic.telemetry.name
+  description = "Pub/Sub topic name para publicar telemetría desde AWS"
+  value       = google_pubsub_topic.telemetry.name
 }
 
 output "bigquery_dataset" {
@@ -11,6 +12,6 @@ output "bigquery_table" {
 }
 
 output "function_url" {
-  value = google_cloudfunctions2_function.telemetry_ingest.service_config[0].uri
+  description = "URL de telemetry-ingest (solo para referencia — la invoca Pub/Sub)"
+  value       = google_cloudfunctions2_function.telemetry_ingest.service_config[0].uri
 }
-
