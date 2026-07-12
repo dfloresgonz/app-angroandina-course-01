@@ -200,6 +200,4 @@ jobs:
           echo "| Recurso | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY
           echo "| Dashboard | ${{ steps.aws.outputs.cloudfront_url }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| WebSocket | ${{ steps.aws.outputs.ws_endpoint }} |" >> $GITHUB_STEP_SUMMARY
           echo "| KDG | ${{ steps.aws.outputs.kdg_url }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| GCP Function | ${{ steps.gcp.outputs.function_url }} |" >> $GITHUB_STEP_SUMMARY

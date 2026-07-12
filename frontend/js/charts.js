@@ -135,7 +135,10 @@ export function updateCharts(latestBySensor) {
 
     ['temperature', 'soil', 'light', 'wind'].forEach(key => {
       const chart = charts[key];
-      const metric = key === 'soil' ? 'soil_moisture' : key === 'light' ? 'light_intensity' : key;
+      const metric = key === 'soil'  ? 'soil_moisture'
+                   : key === 'light' ? 'light_intensity'
+                   : key === 'wind'  ? 'wind_speed'
+                   : key;
       const arr = chart.data.datasets[i].data;
       if (d) {
         if (arr.length >= MAX_POINTS) arr.shift();

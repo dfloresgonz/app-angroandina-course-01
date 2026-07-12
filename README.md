@@ -1,4 +1,4 @@
-# AngroAndina Monitor
+# AgroAndina Monitor
 
 **Curso:** Programación Multi-Nube  
 **Equipo:** Grupo 1  
@@ -12,19 +12,20 @@ Dashboard IoT en tiempo real para AgroAndina Fresh S.A.C., empresa agroindustria
 ## Índice
 
 1. [Problema y objetivos](#1-problema-y-objetivos)
-2. [Arquitectura](#2-arquitectura)
-3. [Principios y patrones aplicados](#3-principios-y-patrones-aplicados)
-4. [Decisiones de arquitectura](#4-decisiones-de-arquitectura)
-5. [Seguridad](#5-seguridad)
-6. [Costos estimados](#6-costos-estimados)
-7. [Estructura del proyecto](#7-estructura-del-proyecto)
-8. [Guía de despliegue](#8-guía-de-despliegue)
-9. [Generación de datos de prueba](#9-generación-de-datos-de-prueba)
-10. [Analítica histórica con Looker Studio](#10-analítica-histórica-con-looker-studio)
-11. [Monitoreo y alertas](#11-monitoreo-y-alertas)
-12. [Limitaciones y trabajo futuro](#12-limitaciones-y-trabajo-futuro)
-13. [Capturas de pantalla](#13-capturas-de-pantalla)
-14. [Destruir infraestructura](#14-destruir-infraestructura)
+2. [Requerimientos](#2-requerimientos)
+3. [Arquitectura](#3-arquitectura)
+4. [Principios y patrones aplicados](#4-principios-y-patrones-aplicados)
+5. [Decisiones de arquitectura](#5-decisiones-de-arquitectura)
+6. [Seguridad](#6-seguridad)
+7. [Costos estimados](#7-costos-estimados)
+8. [Estructura del proyecto](#8-estructura-del-proyecto)
+9. [Guía de despliegue](#9-guía-de-despliegue)
+10. [Generación de datos de prueba](#10-generación-de-datos-de-prueba)
+11. [Analítica histórica con Looker Studio](#11-analítica-histórica-con-looker-studio)
+12. [Monitoreo y alertas](#12-monitoreo-y-alertas)
+13. [Limitaciones y trabajo futuro](#13-limitaciones-y-trabajo-futuro)
+14. [Capturas de pantalla](#14-capturas-de-pantalla)
+15. [Destruir infraestructura](#15-destruir-infraestructura)
 
 ---
 
@@ -58,7 +59,41 @@ No existe visibilidad en tiempo real del estado ambiental de los fundos. Los pro
 
 ---
 
-## 2. Arquitectura
+## 2. Requerimientos
+
+### Funcionales
+
+| ID | Requerimiento |
+|----|---------------|
+| RF-01 | El sistema debe ingestar lecturas de sensores IoT en tiempo real desde 5 puntos de campo simultáneamente |
+| RF-02 | El dashboard debe mostrar los 6 indicadores (temperatura, humedad, humedad del suelo, intensidad lumínica, velocidad del viento, batería) actualizados en tiempo real sin necesidad de refrescar la página |
+| RF-03 | El dashboard debe mostrar los datos de los 5 sensores de forma simultánea en el mismo gráfico por indicador |
+| RF-04 | El sistema debe almacenar el historial completo de lecturas para consultas analíticas retrospectivas |
+| RF-05 | El acceso al dashboard debe estar protegido por autenticación con usuario y contraseña |
+| RF-06 | Los usuarios deben poder crear su propia cuenta con verificación de identidad por email |
+| RF-07 | El sistema debe reenviar cada lectura de sensor a GCP para su almacenamiento analítico en BigQuery |
+| RF-08 | El sistema debe notificar por email cuando la integración con GCP presenta errores |
+| RF-09 | El historial almacenado en BigQuery debe ser consultable mediante una herramienta de visualización (Looker Studio) |
+| RF-10 | Toda la infraestructura debe poder desplegarse y destruirse de forma automatizada |
+
+### No Funcionales
+
+| ID | Categoría | Requerimiento |
+|----|-----------|---------------|
+| RNF-01 | **Latencia** | El tiempo entre la lectura del sensor y la actualización del dashboard no debe superar los 5 segundos en condiciones normales |
+| RNF-02 | **Disponibilidad** | Los componentes de ingesta y visualización deben aprovechar la alta disponibilidad nativa de los servicios serverless (Lambda, API Gateway, CloudFront) sin configuración adicional |
+| RNF-03 | **Escalabilidad** | La arquitectura serverless debe escalar automáticamente ante picos de carga sin intervención manual |
+| RNF-04 | **Seguridad** | Las credenciales de acceso entre nubes deben almacenarse cifradas y nunca exponerse en código fuente ni logs |
+| RNF-05 | **Seguridad** | Cada componente debe operar con permisos mínimos (principio de least privilege) mediante roles IAM individuales |
+| RNF-06 | **Trazabilidad** | Toda la infraestructura debe estar etiquetada con tags consistentes para identificación, auditoría y control de costos |
+| RNF-07 | **Reproducibilidad** | El entorno completo debe poder recrearse desde cero con un único comando de despliegue, sin pasos manuales intermedios |
+| RNF-08 | **Resiliencia** | Los mensajes de telemetría no deben perderse ante fallos temporales de la Cloud Function: Pub/Sub debe reintentar la entrega automáticamente |
+| RNF-09 | **Desacoplamiento** | Los componentes de procesamiento no deben conocerse entre sí directamente; la comunicación debe realizarse a través de buses de eventos o colas de mensajes |
+| RNF-10 | **Observabilidad** | Los errores críticos en la integración cross-cloud deben generar alertas activas, no solo logs pasivos |
+
+---
+
+## 3. Arquitectura
 
 ### Diagrama
 
@@ -118,7 +153,7 @@ Alertas:  CloudWatch Alarm → SNS → email (errores en gcp-forwarder)
 
 ---
 
-## 3. Principios y patrones aplicados
+## 4. Principios y patrones aplicados
 
 ### Infraestructura como Código (IaC)
 
@@ -190,7 +225,7 @@ La comunicación entre nubes se realiza de forma segura: la Lambda obtiene un OA
 
 ---
 
-## 4. Decisiones de Arquitectura
+## 5. Decisiones de Arquitectura
 
 ### ¿Por qué multi-cloud?
 
@@ -458,7 +493,7 @@ Se configuró una alarma de CloudWatch sobre la Lambda `gcp-forwarder` — el pu
 
 ---
 
-## 11. Limitaciones y trabajo futuro  
+## 13. Limitaciones y trabajo futuro  
 
 ### Limitaciones actuales
 
@@ -485,7 +520,7 @@ Todo AWS está en `us-east-1` y GCP en `us-central1`. En producción se evaluar�
 
 ---
 
-## 12. Capturas de pantalla
+## 14. Capturas de pantalla
 
 ### Dashboard en tiempo real
 
@@ -513,7 +548,7 @@ Todo AWS está en `us-east-1` y GCP en `us-central1`. En producción se evaluar�
 
 ---
 
-## 13. Destruir infraestructura
+## 15. Destruir infraestructura
 
 ```bash
 ./teardown.sh
