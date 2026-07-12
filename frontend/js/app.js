@@ -36,7 +36,8 @@ function onMessage(data) {
 }
 
 // Render user info + logout
-document.getElementById('header-user').textContent = session.name;
+document.getElementById('header-user').textContent  = session.name;
+document.getElementById('header-email').textContent = session.email;
 document.getElementById('btn-logout').addEventListener('click', () => {
   signOut();
   window.location.replace('/login.html');

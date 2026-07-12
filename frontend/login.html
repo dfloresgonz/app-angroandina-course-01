@@ -133,6 +133,40 @@
       padding: 10px 12px;
       margin-bottom: 16px;
     }
+
+    .pwd-rules {
+      list-style: none;
+      margin: 8px 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .rule {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+    .rule::before {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1.5px solid var(--muted);
+      flex-shrink: 0;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .rule.ok {
+      color: var(--green);
+    }
+    .rule.ok::before {
+      background: var(--green);
+      border-color: var(--green);
+    }
   </style>
 </head>
 <body>
@@ -195,6 +229,12 @@
           <label class="login-label" for="signup-password">Contraseña</label>
           <input class="login-input" id="signup-password" type="password"
                  autocomplete="new-password" placeholder="Mínimo 8 caracteres" required />
+          <ul class="pwd-rules" id="pwd-rules">
+            <li id="rule-len"  class="rule">Al menos 8 caracteres</li>
+            <li id="rule-low"  class="rule">Una letra minúscula</li>
+            <li id="rule-up"   class="rule">Una letra mayúscula</li>
+            <li id="rule-num"  class="rule">Un número</li>
+          </ul>
         </div>
         <div class="login-field">
           <label class="login-label" for="signup-confirm">Confirmar contraseña</label>
@@ -356,6 +396,26 @@
     }
   });
 
+  // ── Password rules live feedback ───────────────────────────────────────────
+  function checkPasswordRules(val) {
+    const rules = {
+      'rule-len': val.length >= 8,
+      'rule-low': /[a-z]/.test(val),
+      'rule-up':  /[A-Z]/.test(val),
+      'rule-num': /[0-9]/.test(val),
+    };
+    let allOk = true;
+    for (const [id, ok] of Object.entries(rules)) {
+      document.getElementById(id).classList.toggle('ok', ok);
+      if (!ok) allOk = false;
+    }
+    return allOk;
+  }
+
+  document.getElementById('signup-password').addEventListener('input', e => {
+    checkPasswordRules(e.target.value);
+  });
+
   // ── Sign-up ────────────────────────────────────────────────────────────────
   document.getElementById('form-signup').addEventListener('submit', async e => {
     e.preventDefault();
@@ -364,8 +424,8 @@
     const pass    = document.getElementById('signup-password').value;
     const confirm = document.getElementById('signup-confirm').value;
     if (!email || !pass || !confirm) { showError('error-signup', 'Completa todos los campos.'); return; }
+    if (!checkPasswordRules(pass))   { showError('error-signup', 'La contraseña no cumple los requisitos indicados.'); return; }
     if (pass !== confirm)            { showError('error-signup', 'Las contraseñas no coinciden.'); return; }
-    if (pass.length < 8)             { showError('error-signup', 'Mínimo 8 caracteres.'); return; }
     setLoading('btn-signup', true);
     try {
       const result = await signUp(email, pass);
