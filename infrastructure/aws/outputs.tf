@@ -7,7 +7,7 @@ output "ws_endpoint" {
 }
 
 output "kdg_url" {
-  value = aws_cloudformation_stack.kdg_cognito.outputs["KdgUrl"]
+  value = aws_cloudformation_stack.kdg_cognito.outputs["KinesisDataGeneratorUrl"]
 }
 
 output "kinesis_stream_name" {

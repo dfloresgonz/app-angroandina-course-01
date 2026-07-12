@@ -40,6 +40,10 @@ else
     --public-access-block-configuration \
       "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 
+  aws s3api put-bucket-tagging \
+    --bucket "$STATE_BUCKET" \
+    --tagging 'TagSet=[{Key=ProjectName,Value=angroandina-monitor},{Key=Environment,Value=dev},{Key=ManagedBy,Value=terraform}]'
+
   log "  ✓ S3 bucket creado"
 fi
 
@@ -53,7 +57,8 @@ else
     --attribute-definitions AttributeName=LockID,AttributeType=S \
     --key-schema AttributeName=LockID,KeyType=HASH \
     --billing-mode PAY_PER_REQUEST \
-    --region "$AWS_REGION"
+    --region "$AWS_REGION" \
+    --tags Key=ProjectName,Value=angroandina-monitor Key=Environment,Value=dev Key=ManagedBy,Value=terraform
   log "  ✓ DynamoDB tabla creada"
 fi
 
@@ -66,6 +71,8 @@ else
     --project="$GCP_PROJECT" \
     --location=US \
     --uniform-bucket-level-access
+  gcloud storage buckets update "gs://$STATE_BUCKET" \
+    --update-labels=project_name=angroandina-monitor,environment=dev,managed_by=terraform
   log "  ✓ GCS bucket creado"
 fi
 
