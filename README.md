@@ -141,6 +141,7 @@ Alertas:  CloudWatch Alarm → SNS → email (errores en gcp-forwarder)
 | CloudFormation | Deploy del Kinesis Data Generator |
 | CloudWatch Alarms | Monitoreo de errores en gcp-forwarder |
 | SNS | Notificaciones por email ante errores |
+| WAF (×2) | Protección OWASP top 10 en CloudFront y API Gateway |
 
 **GCP**
 | Servicio | Rol |
@@ -275,12 +276,23 @@ La Lambda `gcp-forwarder` necesita publicar en Pub/Sub (API de GCP). El flujo de
 3. El token se cachea en el scope del módulo (warm invocations lo reutilizan)
 4. Pub/Sub valida el token antes de aceptar la publicación
 
+### WAF (Web Application Firewall)
+
+Se configuraron dos WAFs con el managed rule group `AWSManagedRulesCommonRuleSet` (protección OWASP top 10: SQLi, XSS, path traversal, etc.):
+
+| WAF | Scope | Recurso protegido | Nota |
+|-----|-------|-------------------|------|
+| `frontend-waf` | `CLOUDFRONT` | Distribución CloudFront | Inspecciona todas las requests al frontend |
+| `apigw-waf` | `REGIONAL` | API Gateway WebSocket | Inspecciona el handshake HTTP inicial (`$connect`) |
+
+> El WAF de WebSocket protege el momento de la conexión. Los frames posteriores no son inspeccionables por WAF — es una limitación del protocolo WebSocket.
+
 ### Recursos públicos vs privados
 
-| Recurso | Acceso | Justificación |
-|---------|--------|---------------|
-| CloudFront / S3 | Público | Es el frontend web |
-| API Gateway WebSocket | Público con token Cognito | El token se valida en cada conexión |
+| Recurso | Acceso | Protección adicional |
+|---------|--------|----------------------|
+| CloudFront / S3 | Público | WAF `frontend-waf` (OWASP top 10) |
+| API Gateway WebSocket | Público con token Cognito | WAF `apigw-waf` en handshake |
 | Cloud Function telemetry-ingest | Público | Restricción de permisos del entorno (ver Limitaciones) |
 | DynamoDB | Privado (solo Lambdas) | IAM roles por función |
 | EventBridge bus | Privado (solo data-processor) | IAM `events:PutEvents` restringido al ARN del bus |
@@ -309,7 +321,8 @@ Estimación para el volumen del proyecto (5 sensores, ~1 msg/seg, uso intermiten
 | Secrets Manager | 1 secret | ~$0.40 |
 | S3 + CloudFront | < 1 GB transferencia | ~$0.10 |
 | Cognito | < 50,000 MAU | Free tier |
-| **Total AWS** | | **~$0.53/mes** |
+| WAF (×2 ACLs + 2 rule groups) | ~1M requests/mes | ~$13.20 |
+| **Total AWS** | | **~$13.73/mes** |
 
 **GCP**
 

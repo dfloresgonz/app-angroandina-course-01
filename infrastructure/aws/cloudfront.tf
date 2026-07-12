@@ -9,6 +9,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   default_root_object = "index.html"
   comment             = "${var.project_name}-${var.environment}-frontend"
+  web_acl_id          = aws_wafv2_web_acl.frontend.arn
   tags                = local.tags
 
   origin {
