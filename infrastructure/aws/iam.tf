@@ -112,7 +112,7 @@ resource "aws_iam_role_policy" "gcp_forwarder" {
       {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
-        Resource = aws_secretsmanager_secret.gcp_sa_key.arn
+        Resource = data.aws_secretsmanager_secret.gcp_sa_key.arn
       },
       {
         Effect = "Allow"
