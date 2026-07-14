@@ -39,8 +39,8 @@ async function getDisabledSensors() {
   // NextPollConfigurationToken debe usarse en la próxima llamada
   sessionToken = res.NextPollConfigurationToken;
 
-  // Si ContentType está presente, hubo cambio — actualizar cache
-  if (res.ContentType) {
+  // Configuration vacío (0 bytes) significa que no hubo cambios desde el último poll
+  if (res.Configuration?.length > 0) {
     const text = new TextDecoder().decode(res.Configuration);
     flagCache = JSON.parse(text);
   }
@@ -58,7 +58,10 @@ export const handler = async (event) => {
 
   const [{ Items: connections }, disabledSensors] = await Promise.all([
     dynamo.send(new ScanCommand({ TableName: WS_CONNECTIONS_TABLE })),
-    getDisabledSensors(),
+    getDisabledSensors().catch(err => {
+      console.error('[getDisabledSensors] fallback to empty list:', err.message);
+      return [];
+    }),
   ]);
 
   await Promise.all(records.map(async (record) => {
