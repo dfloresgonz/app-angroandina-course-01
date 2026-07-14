@@ -40,6 +40,17 @@ function setSensorDisabled(sensorId, disabled) {
   if (dot) dot.style.opacity = disabled ? '0.3' : '1';
 }
 
+let renderPending = false;
+
+function scheduleRender() {
+  if (renderPending) return;
+  renderPending = true;
+  requestAnimationFrame(() => {
+    updateCharts(latestBySensor);
+    renderPending = false;
+  });
+}
+
 function onMessage(data) {
   if (!data.sensor_id) return;
 
@@ -57,7 +68,7 @@ function onMessage(data) {
   }
 
   latestBySensor[data.sensor_id] = data;
-  updateCharts(latestBySensor);
+  scheduleRender();
 }
 
 // Render user info + logout
