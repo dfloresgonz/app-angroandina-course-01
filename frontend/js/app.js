@@ -1,6 +1,6 @@
 import { getSession, signOut }       from './auth.js';
 import { connect }                  from './websocket.js';
-import { updateCharts, COLORS, SENSORS } from './charts.js';
+import { updateCharts, clearSensorData, COLORS, SENSORS } from './charts.js';
 
 // Auth guard
 const session = getSession();
@@ -47,7 +47,7 @@ function onMessage(data) {
     disabledSensors.add(data.sensor_id);
     setSensorDisabled(data.sensor_id, true);
     delete latestBySensor[data.sensor_id];
-    updateCharts(latestBySensor);
+    clearSensorData(data.sensor_id);
     return;
   }
 

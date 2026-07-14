@@ -163,4 +163,20 @@ export function updateCharts(latestBySensor) {
   Object.values(charts).forEach(c => c.update());
 }
 
+export function clearSensorData(sensorId) {
+  const i = SENSORS.indexOf(sensorId);
+  if (i === -1) return;
+
+  ['temperature', 'soil', 'light', 'wind'].forEach(key => {
+    charts[key].data.datasets[i].data = [];
+  });
+
+  charts.humidity.data.datasets[0].data[i] = null;
+  charts.battery.data.datasets[0].data[i]            = null;
+  charts.battery.data.datasets[0].backgroundColor[i] = '#1e2e1e';
+  charts.battery.data.datasets[0].borderColor[i]     = '#1e2e1e';
+
+  Object.values(charts).forEach(c => c.update());
+}
+
 export { COLORS, SENSORS };
