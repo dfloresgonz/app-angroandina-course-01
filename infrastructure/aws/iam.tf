@@ -55,6 +55,18 @@ resource "aws_iam_role_policy" "data_processor" {
       {
         Effect = "Allow"
         Action = [
+          "appconfig:GetLatestConfiguration",
+          "appconfig:StartConfigurationSession"
+        ]
+        Resource = [
+          aws_appconfig_application.main.arn,
+          "${aws_appconfig_application.main.arn}/environment/${aws_appconfig_environment.main.environment_id}",
+          "${aws_appconfig_application.main.arn}/configurationprofile/${aws_appconfig_configuration_profile.sensor_filter.configuration_profile_id}"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"

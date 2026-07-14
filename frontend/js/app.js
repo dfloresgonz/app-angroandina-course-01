@@ -14,23 +14,46 @@ const SENSOR_LOCATIONS = {
   SENSOR_05: 'Fundo Chincha — Parcela E1'
 };
 
-const latestBySensor = {};
+const latestBySensor  = {};
+const disabledSensors = new Set();
 
 function buildLegend() {
   const legend = document.getElementById('legend');
   SENSORS.forEach(id => {
     const item = document.createElement('div');
     item.className = 'legend-item';
+    item.id = `legend-${id}`;
     item.innerHTML = `
       <span class="legend-dot" style="background:${COLORS[id]}"></span>
       <span>${id} &mdash; ${SENSOR_LOCATIONS[id]}</span>
+      <span class="legend-badge-disabled" id="badge-${id}" hidden>Deshabilitado</span>
     `;
     legend.appendChild(item);
   });
 }
 
+function setSensorDisabled(sensorId, disabled) {
+  const badge = document.getElementById(`badge-${sensorId}`);
+  const dot   = document.querySelector(`#legend-${sensorId} .legend-dot`);
+  if (!badge) return;
+  badge.hidden = !disabled;
+  if (dot) dot.style.opacity = disabled ? '0.3' : '1';
+}
+
 function onMessage(data) {
   if (!data.sensor_id) return;
+
+  if (data.status === 'disabled') {
+    disabledSensors.add(data.sensor_id);
+    setSensorDisabled(data.sensor_id, true);
+    return;
+  }
+
+  if (disabledSensors.has(data.sensor_id)) {
+    disabledSensors.delete(data.sensor_id);
+    setSensorDisabled(data.sensor_id, false);
+  }
+
   latestBySensor[data.sensor_id] = data;
   updateCharts(latestBySensor);
 }

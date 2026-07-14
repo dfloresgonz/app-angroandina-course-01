@@ -124,6 +124,17 @@ main {
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+  transition: opacity 0.3s;
+}
+
+.legend-badge-disabled {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: #6b7280;
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.03em;
 }
 
 .grid {

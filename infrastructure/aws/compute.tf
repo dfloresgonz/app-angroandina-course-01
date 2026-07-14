@@ -66,6 +66,9 @@ resource "aws_lambda_function" "data_processor" {
       WS_CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
       WS_ENDPOINT          = replace(aws_apigatewayv2_stage.main.invoke_url, "wss://", "https://")
       EVENT_BUS_NAME       = aws_cloudwatch_event_bus.telemetry.name
+      APPCONFIG_APP_ID     = aws_appconfig_application.main.id
+      APPCONFIG_ENV_ID     = aws_appconfig_environment.main.environment_id
+      APPCONFIG_PROFILE_ID = aws_appconfig_configuration_profile.sensor_filter.configuration_profile_id
     }
   }
 }

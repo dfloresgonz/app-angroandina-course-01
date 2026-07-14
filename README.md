@@ -23,9 +23,10 @@ Dashboard IoT en tiempo real para AgroAndina Fresh S.A.C., empresa agroindustria
 10. [Generación de datos de prueba](#10-generación-de-datos-de-prueba)
 11. [Analítica histórica con Looker Studio](#11-analítica-histórica-con-looker-studio)
 12. [Monitoreo y alertas](#12-monitoreo-y-alertas)
-13. [Limitaciones y trabajo futuro](#13-limitaciones-y-trabajo-futuro)
-14. [Capturas de pantalla](#14-capturas-de-pantalla)
-15. [Destruir infraestructura](#15-destruir-infraestructura)
+13. [Feature flags — control operacional](#13-feature-flags--control-operacional)
+14. [Limitaciones y trabajo futuro](#14-limitaciones-y-trabajo-futuro)
+15. [Capturas de pantalla](#15-capturas-de-pantalla)
+16. [Destruir infraestructura](#16-destruir-infraestructura)
 
 ---
 
@@ -124,6 +125,7 @@ data-processor (Lambda Node.js 24)
 
 Frontend: S3 + CloudFront
 Auth:     Amazon Cognito (auto-registro con verificación por email)
+Flags:    AppConfig (sensor-filter) ──► data-processor (cache 30s)
 IaC:      Terraform (remote state en S3 + DynamoDB para AWS, GCS para GCP)
 CI/CD:    GitHub Actions
 Alertas:  CloudWatch Alarm → SNS → email (errores Lambda + mensajes en DLQ)
@@ -144,7 +146,8 @@ Alertas:  CloudWatch Alarm → SNS → email (errores Lambda + mensajes en DLQ)
 | S3 + CloudFront | Hosting del frontend con CDN global |
 | Cognito | Autenticación con auto-registro y verificación por email |
 | CloudFormation | Deploy del Kinesis Data Generator |
-| CloudWatch Alarms | Monitoreo de errores en gcp-forwarder |
+| AppConfig | Feature flags para control operacional sin redesploy |
+| CloudWatch Alarms | Monitoreo de errores en gcp-forwarder y DLQ |
 | SNS | Notificaciones por email ante errores |
 | WAF | Protección OWASP top 10 en CloudFront |
 
@@ -201,6 +204,8 @@ El sistema está diseñado alrededor de eventos, no de llamadas directas entre c
 | CloudWatch Alarm | SNS topic | Email |
 
 Ningún productor conoce a su consumidor. Esto permite agregar nuevos consumidores (alertas, auditoría, nuevas nubes) sin modificar el código existente. El patrón se aplica tanto dentro de AWS (Kinesis → EventBridge) como entre nubes (Pub/Sub → Cloud Function).
+
+Adicionalmente, **AWS AppConfig** actúa como plano de control dinámico: `data-processor` consulta el flag `sensor-filter` (cacheado 30 segundos) y decide en tiempo real si procesar o filtrar cada lectura — sin redesploy ni cambio de infraestructura.
 
 ### Microservicios Serverless
 
@@ -268,6 +273,15 @@ EventBridge puede invocar Lambda directamente, pero si la Lambda falla el evento
 ### ¿Por qué DynamoDB con TTL para el historial en tiempo real?
 
 DynamoDB sirve como buffer de estado actual para el WebSocket: cuando un cliente se conecta puede ver el último valor de cada sensor inmediatamente. El TTL de 3 horas evita acumulación ilimitada de datos — el historial permanente vive en BigQuery.
+
+### ¿Por qué AppConfig para el filtro de sensores?
+
+Un sensor defectuoso puede enviar lecturas corruptas de forma continua. Sin un mecanismo de control, la única opción sería redesplegar la Lambda con el sensor hardcodeado — lento y riesgoso. Con AppConfig:
+
+- El flag `sensor-filter` se actualiza desde la consola de AWS en segundos, sin redesploy
+- `data-processor` cachea el valor 30 segundos en el scope del módulo — invocaciones warm no pagan latencia adicional
+- Si el sensor está en `disabled_sensors`: no se persiste en DynamoDB ni llega a BigQuery (historial limpio), pero el dashboard recibe una notificación `status: "disabled"` para mostrar el estado visualmente en lugar de datos congelados
+- Al rehabilitar el sensor (removerlo de la lista), el flujo se reanuda automáticamente en la siguiente ventana de 30 segundos
 
 ### ¿Por qué Cognito con auto-registro?
 
@@ -338,6 +352,7 @@ Estimación para el volumen del proyecto (5 sensores, ~1 msg/seg, uso intermiten
 | S3 + CloudFront | < 1 GB transferencia | ~$0.10 |
 | Cognito | < 50,000 MAU | Free tier |
 | WAF (×1 ACL + 1 rule group) | ~1M requests/mes | ~$6.60 |
+| AppConfig | 1 perfil, ~1M llamadas GetLatestConfiguration/mes | Free tier (primeros 10K deploys gratis) |
 | **Total AWS** | | **~$7.13/mes** |
 
 **GCP**
@@ -361,8 +376,8 @@ Estimación para el volumen del proyecto (5 sensores, ~1 msg/seg, uso intermiten
 ├── .github/workflows/deploy.yml   # Pipeline CI/CD
 ├── app/lambdas/
 │   ├── ws-handler/                # Maneja conexiones WebSocket (connect/disconnect)
-│   ├── data-processor/            # Kinesis → DynamoDB + WebSocket + EventBridge
-│   └── gcp-forwarder/             # EventBridge → Pub/Sub (OAuth2 con SA key)
+│   ├── data-processor/            # Kinesis → DynamoDB + WebSocket + EventBridge + AppConfig filter
+│   └── gcp-forwarder/             # SQS → Pub/Sub (OAuth2 con SA key)
 ├── frontend/
 │   ├── index.html                 # Dashboard principal (6 gráficos, 5 sensores)
 │   ├── login.html                 # Login + auto-registro con Cognito
@@ -377,7 +392,8 @@ Estimación para el volumen del proyecto (5 sensores, ~1 msg/seg, uso intermiten
 │   └── telemetry-ingest/          # Cloud Function: Pub/Sub push → BigQuery
 ├── infrastructure/
 │   ├── aws/                       # Terraform: Kinesis, Lambda, DynamoDB, API GW,
-│   │                              #   CloudFront, S3, Cognito, EventBridge, Secrets Manager
+│   │                              #   CloudFront, S3, Cognito, EventBridge, SQS,
+│   │                              #   Secrets Manager, AppConfig, WAF, CloudWatch, SNS
 │   └── gcp/                       # Terraform: Pub/Sub, Cloud Function, BigQuery
 ├── bootstrap-state.sh             # Crea backends de Terraform (ejecutar una vez)
 ├── teardown.sh                    # Destruye toda la infraestructura
@@ -526,7 +542,44 @@ La alarma del DLQ es la más accionable: indica que un mensaje no pudo procesars
 
 ---
 
-## 13. Limitaciones y trabajo futuro  
+## 13. Feature flags — control operacional
+
+El sistema usa **AWS AppConfig** para modificar el comportamiento en producción sin redesploy. El perfil `sensor-filter` contiene la lista de sensores deshabilitados.
+
+### Cómo deshabilitar un sensor
+
+1. Ir a **AWS Console → AppConfig → `angroandina-monitor` → sensor-filter**
+2. Crear nueva versión con el sensor a filtrar:
+```json
+{
+  "disabled_sensors": ["SENSOR_03"]
+}
+```
+3. Desplegar con la estrategia `angroandina-monitor-instant` (efecto inmediato)
+4. En ≤ 30 segundos, `data-processor` detecta el cambio:
+   - Las lecturas de `SENSOR_03` **no** se persisten en DynamoDB ni llegan a BigQuery
+   - El dashboard recibe `{ "sensor_id": "SENSOR_03", "status": "disabled" }` por WebSocket
+   - La leyenda del dashboard muestra el badge **Deshabilitado** con el punto del sensor opaco
+
+### Cómo rehabilitar un sensor
+
+Crear nueva versión con la lista vacía (o sin el sensor) y redesplegar:
+```json
+{
+  "disabled_sensors": []
+}
+```
+El flujo se reanuda automáticamente en la siguiente ventana de polling (30s).
+
+### Flags disponibles
+
+| Perfil | Campo | Tipo | Efecto |
+|--------|-------|------|--------|
+| `sensor-filter` | `disabled_sensors` | `string[]` | Filtra sensores: sin persistencia, sin GCP, badge en dashboard |
+
+---
+
+## 14. Limitaciones y trabajo futuro  
 
 ### Limitaciones actuales
 
@@ -546,14 +599,14 @@ Todo AWS está en `us-east-1` y GCP en `us-central1`. En producción se evaluar�
 
 - Habilitar OIDC en Pub/Sub push cuando el entorno lo permita (hacer Cloud Function privada)
 - Ampliar CloudWatch Alarms a `data-processor` y latencia de WebSocket
-- Agregar X-Ray tracing en el flujo SQS → Lambda para end-to-end visibility
+- Agregar más feature flags en AppConfig (ej: `websocket-broadcast`, `pubsub-dry-run`)
 - Agregar panel de administración para gestionar usuarios de Cognito
 - Conectar sensores físicos reales vía AWS IoT Core
 - Configurar retención en BigQuery y particionamiento por fecha para optimizar costos de consulta
 
 ---
 
-## 14. Capturas de pantalla
+## 15. Capturas de pantalla
 
 ### Dashboard en tiempo real
 
@@ -626,7 +679,7 @@ GCP - Functions
 
 ---
 
-## 15. Destruir infraestructura
+## 16. Destruir infraestructura
 
 ```bash
 ./teardown.sh

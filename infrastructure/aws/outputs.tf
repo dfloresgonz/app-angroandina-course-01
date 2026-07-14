@@ -33,3 +33,13 @@ output "cognito_user_pool_id" {
 output "cognito_client_id" {
   value = aws_cognito_user_pool_client.dashboard.id
 }
+
+output "appconfig_app_id" {
+  description = "AppConfig application ID — usar en consola para editar sensor-filter"
+  value       = aws_appconfig_application.main.id
+}
+
+output "appconfig_env_id" {
+  description = "AppConfig environment ID"
+  value       = aws_appconfig_environment.main.environment_id
+}
