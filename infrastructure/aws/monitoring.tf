@@ -41,9 +41,9 @@ resource "aws_cloudwatch_metric_alarm" "gcp_forwarder_dlq" {
   }
 
   statistic           = "Sum"
-  period              = 60
+  period              = 300
   evaluation_periods  = 1
-  threshold           = 1
+  threshold           = 3
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
 

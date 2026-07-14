@@ -1,7 +1,11 @@
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { createSign } from 'node:crypto';
+import AWSXRay from 'aws-xray-sdk-core';
+import { captureFetchGlobal } from 'aws-xray-sdk-fetch';
 
-const sm = new SecretsManagerClient({});
+captureFetchGlobal();
+
+const sm = AWSXRay.captureAWSv3Client(new SecretsManagerClient({}));
 const { GCP_SA_SECRET_ARN, GCP_PROJECT_ID, GCP_PUBSUB_TOPIC } = process.env;
 
 const PUBSUB_ENDPOINT =

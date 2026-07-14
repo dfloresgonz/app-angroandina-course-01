@@ -1,0 +1,9 @@
+{
+  "name": "data-processor",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "aws-xray-sdk-core": "^3.10.3",
+    "aws-xray-sdk-fetch": "^0.2.0"
+  }
+}

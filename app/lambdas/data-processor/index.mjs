@@ -3,9 +3,10 @@ import { DynamoDBDocumentClient, PutCommand, ScanCommand, DeleteCommand } from '
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import { randomUUID } from 'node:crypto';
+import AWSXRay from 'aws-xray-sdk-core';
 
-const dynamo   = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const eventbus = new EventBridgeClient({});
+const dynamo   = DynamoDBDocumentClient.from(AWSXRay.captureAWSv3Client(new DynamoDBClient({})));
+const eventbus = AWSXRay.captureAWSv3Client(new EventBridgeClient({}));
 
 const { TELEMETRY_TABLE, WS_CONNECTIONS_TABLE, WS_ENDPOINT, EVENT_BUS_NAME } = process.env;
 
