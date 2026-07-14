@@ -56,21 +56,33 @@ async function getAccessToken() {
 
 export const handler = async (event) => {
   const token = await getAccessToken();
+  const failures = [];
 
-  // EventBridge entrega el payload en event.detail
-  const data = Buffer.from(JSON.stringify(event.detail)).toString('base64');
+  for (const record of event.Records) {
+    try {
+      // SQS wraps the EventBridge envelope in record.body
+      const ebEvent = JSON.parse(record.body);
+      const data = Buffer.from(JSON.stringify(ebEvent.detail)).toString('base64');
 
-  const res = await fetch(PUBSUB_ENDPOINT, {
-    method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ messages: [{ data }] })
-  });
+      const res = await fetch(PUBSUB_ENDPOINT, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ messages: [{ data }] })
+      });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Pub/Sub publish failed ${res.status}: ${body}`);
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Pub/Sub publish failed ${res.status}: ${body}`);
+      }
+    } catch (err) {
+      console.error(`Failed record ${record.messageId}:`, err);
+      failures.push({ itemIdentifier: record.messageId });
+    }
   }
+
+  // ReportBatchItemFailures — solo los fallidos vuelven a la queue / DLQ
+  return { batchItemFailures: failures };
 };

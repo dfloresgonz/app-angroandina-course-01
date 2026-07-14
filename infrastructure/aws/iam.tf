@@ -65,6 +65,11 @@ resource "aws_iam_role_policy" "data_processor" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "data_processor_xray" {
+  role       = aws_iam_role.data_processor.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 resource "aws_iam_role" "ws_handler" {
   name               = "${var.project_name}-ws-handler-role"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
@@ -96,6 +101,11 @@ resource "aws_iam_role_policy" "ws_handler" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "ws_handler_xray" {
+  role       = aws_iam_role.ws_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 resource "aws_iam_role" "gcp_forwarder" {
   name               = "${var.project_name}-gcp-forwarder-role"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
@@ -117,6 +127,15 @@ resource "aws_iam_role_policy" "gcp_forwarder" {
       {
         Effect = "Allow"
         Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = aws_sqs_queue.gcp_forwarder.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -125,4 +144,9 @@ resource "aws_iam_role_policy" "gcp_forwarder" {
       }
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "gcp_forwarder_xray" {
+  role       = aws_iam_role.gcp_forwarder.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }

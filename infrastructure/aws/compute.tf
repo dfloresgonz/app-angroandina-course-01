@@ -12,6 +12,10 @@ resource "aws_lambda_function" "ws_handler" {
   timeout          = 10
   tags             = local.tags
 
+  tracing_config {
+    mode = "Active"
+  }
+
   environment {
     variables = {
       WS_CONNECTIONS_TABLE = aws_dynamodb_table.ws_connections.name
@@ -28,6 +32,10 @@ resource "aws_lambda_function" "gcp_forwarder" {
   source_code_hash = filebase64sha256("${local.lambda_zip_path}/gcp-forwarder.zip")
   timeout          = 15
   tags             = local.tags
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -48,6 +56,10 @@ resource "aws_lambda_function" "data_processor" {
   timeout          = 30
   tags             = local.tags
 
+  tracing_config {
+    mode = "Active"
+  }
+
   environment {
     variables = {
       TELEMETRY_TABLE      = aws_dynamodb_table.telemetry.name
@@ -63,6 +75,13 @@ resource "aws_lambda_event_source_mapping" "kinesis" {
   function_name     = aws_lambda_function.data_processor.arn
   starting_position = "LATEST"
   batch_size        = 10
+}
+
+resource "aws_lambda_event_source_mapping" "sqs_gcp_forwarder" {
+  event_source_arn                   = aws_sqs_queue.gcp_forwarder.arn
+  function_name                      = aws_lambda_function.gcp_forwarder.arn
+  batch_size                         = 1
+  function_response_types            = ["ReportBatchItemFailures"]
 }
 
 resource "aws_apigatewayv2_api" "ws" {
@@ -102,6 +121,13 @@ resource "aws_apigatewayv2_stage" "main" {
   name        = var.environment
   auto_deploy = true
   tags        = local.tags
+
+  default_route_settings {
+    data_trace_enabled     = true
+    logging_level          = "INFO"
+    throttling_burst_limit = 100
+    throttling_rate_limit  = 50
+  }
 }
 
 resource "aws_lambda_permission" "ws_handler" {

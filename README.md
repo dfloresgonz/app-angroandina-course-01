@@ -107,7 +107,11 @@ data-processor (Lambda Node.js 24)
     └── EventBridge custom bus
               │  Rule: source = angroandina.telemetry
               ▼
-        gcp-forwarder (Lambda Node.js 24)
+          SQS Queue (gcp-forwarder-queue)
+              │  Event Source Mapping (batch=1, ReportBatchItemFailures)
+              │                              ┌─► SQS DLQ (14 días) ──► CloudWatch Alarm → SNS → email
+              ▼                              │   (tras 3 intentos fallidos)
+        gcp-forwarder (Lambda Node.js 24) ──┘
               │  OAuth2 Bearer token
               │  (SA key desde Secrets Manager)
               ▼
@@ -122,7 +126,7 @@ Frontend: S3 + CloudFront
 Auth:     Amazon Cognito (auto-registro con verificación por email)
 IaC:      Terraform (remote state en S3 + DynamoDB para AWS, GCS para GCP)
 CI/CD:    GitHub Actions
-Alertas:  CloudWatch Alarm → SNS → email (errores en gcp-forwarder)
+Alertas:  CloudWatch Alarm → SNS → email (errores Lambda + mensajes en DLQ)
 ```
 
 ### Servicios por nube
@@ -135,6 +139,7 @@ Alertas:  CloudWatch Alarm → SNS → email (errores en gcp-forwarder)
 | DynamoDB (×2) | Historial de telemetría y conexiones WebSocket |
 | API Gateway WebSocket | Canal de push al dashboard |
 | EventBridge | Bus de eventos desacoplado entre Lambdas |
+| SQS + DLQ | Buffer y reintentos entre EventBridge y gcp-forwarder |
 | Secrets Manager | Almacenamiento seguro de SA key de GCP |
 | S3 + CloudFront | Hosting del frontend con CDN global |
 | Cognito | Autenticación con auto-registro y verificación por email |
@@ -187,7 +192,9 @@ El sistema está diseñado alrededor de eventos, no de llamadas directas entre c
 | Productor | Mecanismo | Consumidor |
 |-----------|-----------|------------|
 | KDG (sensores) | Kinesis Data Stream | `data-processor` Lambda |
-| `data-processor` | EventBridge custom bus (`SensorReading`) | `gcp-forwarder` Lambda |
+| `data-processor` | EventBridge custom bus (`SensorReading`) | SQS Queue |
+| SQS Queue | Event Source Mapping (batch=1) | `gcp-forwarder` Lambda |
+| SQS DLQ | CloudWatch Alarm | SNS → email (tras 3 reintentos fallidos) |
 | `gcp-forwarder` | GCP Pub/Sub topic (publish REST API) | Pub/Sub push subscription |
 | Pub/Sub push subscription | HTTP push a Cloud Function | `telemetry-ingest` → BigQuery |
 | `data-processor` | API Gateway WebSocket | Dashboard web |
@@ -247,6 +254,16 @@ Llamar directamente a la Cloud Function desde Lambda crea acoplamiento sincróni
 - El mensaje queda en la cola aunque la Cloud Function esté momentáneamente caída
 - Pub/Sub reintenta automáticamente con backoff (10s–60s) hasta que la función responde
 - Se pueden agregar otros suscriptores al topic en el futuro sin cambiar AWS
+
+### ¿Por qué SQS + DLQ entre EventBridge y gcp-forwarder?
+
+EventBridge puede invocar Lambda directamente, pero si la Lambda falla el evento se pierde (EventBridge reintenta solo 2 veces). Con SQS como intermediario:
+
+- Los mensajes persisten en la cola incluso si `gcp-forwarder` tiene errores transitorios (timeout, rate limit de Pub/Sub)
+- La Lambda usa `ReportBatchItemFailures` para devolver solo los mensajes fallidos a la cola — los exitosos no se reprocesen
+- Tras 3 intentos fallidos el mensaje pasa a la DLQ (retención 14 días), y una alarma CloudWatch notifica por email inmediatamente
+- `visibility_timeout = 90s` (≥ timeout de Lambda × 6) evita que SQS considere el mensaje disponible mientras la Lambda lo procesa
+- El volumen de sensores (~1 msg/seg) no representa carga significativa para SQS
 
 ### ¿Por qué DynamoDB con TTL para el historial en tiempo real?
 
@@ -491,17 +508,21 @@ aws cognito-idp admin-create-user \
 
 ## 10. Monitoreo y alertas
 
-Se configuró una alarma de CloudWatch sobre la Lambda `gcp-forwarder` — el punto de integración más crítico del sistema, ya que un fallo aquí detiene el flujo de datos hacia GCP.
+Se configuran dos alarmas de CloudWatch sobre los puntos de integración más críticos con GCP. Ambas notifican al mismo SNS topic — una sola suscripción de email cubre todas las alertas.
+
+| Alarma | Métrica | Condición | Cuándo notifica |
+|--------|---------|-----------|-----------------|
+| `gcp-forwarder-errors` | `AWS/Lambda › Errors › FunctionName=…-gcp-forwarder` | ≥ 1 error en 60s | ALARM y OK (recuperación) |
+| `gcp-forwarder-dlq` | `AWS/SQS › ApproximateNumberOfMessagesVisible › QueueName=…-dlq` | ≥ 1 mensaje en la DLQ | ALARM (mensaje llegó al DLQ tras 3 intentos fallidos) |
 
 | Recurso | Detalle |
 |---------|---------|
 | SNS topic | `angroandina-monitor-alerts` |
 | Suscriptor | `dfloresgonz@gmail.com` (confirmación requerida al primer deploy) |
-| Métrica | `AWS/Lambda › Errors › FunctionName=angroandina-monitor-gcp-forwarder` |
-| Condición | ≥ 1 error en una ventana de 60 segundos |
-| Notifica en | ALARM (error detectado) y OK (recuperación) |
 
 > Al desplegar por primera vez, AWS envía un correo de confirmación a la dirección suscrita. Es necesario aceptarlo para activar las notificaciones.
+
+La alarma del DLQ es la más accionable: indica que un mensaje no pudo procesarse tras 3 reintentos y necesita revisión manual. Los mensajes quedan retenidos en el DLQ por 14 días.
 
 ---
 
@@ -525,7 +546,7 @@ Todo AWS está en `us-east-1` y GCP en `us-central1`. En producción se evaluar�
 
 - Habilitar OIDC en Pub/Sub push cuando el entorno lo permita (hacer Cloud Function privada)
 - Ampliar CloudWatch Alarms a `data-processor` y latencia de WebSocket
-- Implementar Dead Letter Queue en EventBridge para mensajes no procesados
+- Agregar X-Ray tracing en el flujo SQS → Lambda para end-to-end visibility
 - Agregar panel de administración para gestionar usuarios de Cognito
 - Conectar sensores físicos reales vía AWS IoT Core
 - Configurar retención en BigQuery y particionamiento por fecha para optimizar costos de consulta
