@@ -46,6 +46,8 @@ function onMessage(data) {
   if (data.status === 'disabled') {
     disabledSensors.add(data.sensor_id);
     setSensorDisabled(data.sensor_id, true);
+    delete latestBySensor[data.sensor_id];
+    updateCharts(latestBySensor);
     return;
   }
 
