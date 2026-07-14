@@ -168,7 +168,7 @@ export function clearSensorData(sensorId) {
   if (i === -1) return;
 
   ['temperature', 'soil', 'light', 'wind'].forEach(key => {
-    charts[key].data.datasets[i].data = [];
+    charts[key].data.datasets[i].data = Array(MAX_POINTS).fill(null);
   });
 
   charts.humidity.data.datasets[0].data[i] = null;
